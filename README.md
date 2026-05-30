@@ -1,0 +1,2 @@
+Construí una API REST con FastAPI que expone información en formato JSON. Luego desarrollé un frontend en React que consume esos endpoints mediante fetch(), mostrando los datos dinámicamente en la interfaz. También configuré CORS para permitir la comunicación entre ambos servicios.
+I built a REST API using FastAPI that returns data in JSON format. I then developed a React frontend that fetches data from those endpoints using `fetch()`, displaying the data dynamically on the interface. I also configured CORS to enable communication between the two services.

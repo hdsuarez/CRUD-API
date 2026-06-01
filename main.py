@@ -4,9 +4,17 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+import sqlite3
 # Crear aplicación
 app = FastAPI()
+
+#conexion sqlite base de dats
+
+def obtener_conexion():
+
+    conexion = sqlite3.connect("usuarios.db")
+
+    return conexion
 
 # ===================================
 # CONFIGURACIÓN CORS
@@ -51,59 +59,88 @@ usuarios = [
 # ===============================
 
 @app.get("/usuarios")
-
 def obtener_usuarios():
 
-    return usuarios
+    conexion = obtener_conexion()
+
+    cursor = conexion.cursor()
+
+    cursor.execute("SELECT * FROM usuarios")
+
+    datos = cursor.fetchall()
+
+    conexion.close()
+
+    return datos
 
 # ===============================
 # CREATE → CREAR USUARIO
 # ===============================
+@app.post("/crear/{nombre}/{edad}")
 
-@app.post("/crear/{nombre}")
+def crear_usuario(nombre: str, edad: int):
 
-def crear_usuario(nombre: str):
+    # Conectar a SQLite
+    conexion = obtener_conexion()
 
-    nuevo_usuario = {
+    cursor = conexion.cursor()
 
-        "id": len(usuarios) + 1,
-        "nombre": nombre
+    # Insertar usuario
+    cursor.execute("""
+    INSERT INTO usuarios (nombre, edad)
+    VALUES (?, ?)
+    """, (nombre, edad))
 
-    }
+    # Guardar cambios
+    conexion.commit()
 
-    usuarios.append(nuevo_usuario)
+    # Obtener el ID generado automáticamente
+    nuevo_id = cursor.lastrowid
+
+    conexion.close()
 
     return {
 
         "mensaje": "Usuario creado ✅",
-        "usuario": nuevo_usuario
+
+        "usuario": {
+            "id": nuevo_id,
+            "nombre": nombre,
+            "edad": edad
+        }
 
     }
-
 # ===============================
 # UPDATE → ACTUALIZAR USUARIO
 # ===============================
 
-@app.put("/actualizar/{id}/{nuevo_nombre}")
+@app.put("/actualizar/{id}/{nuevo_nombre}/{nueva_edad}")
 
-def actualizar_usuario(id: int, nuevo_nombre: str):
+def actualizar_usuario(id: int, nuevo_nombre: str, nueva_edad: int):
 
-    for usuario in usuarios:
+    conexion = obtener_conexion()
 
-        if usuario["id"] == id:
+    cursor = conexion.cursor()
 
-            usuario["nombre"] = nuevo_nombre
+    cursor.execute("""
+    UPDATE usuarios
+    SET nombre = ?, edad = ?
+    WHERE id = ?
+    """, (nuevo_nombre, nueva_edad, id))
 
-            return {
+    conexion.commit()
 
-                "mensaje": "Usuario actualizado 🔄",
-                "usuario": usuario
-
-            }
+    conexion.close()
 
     return {
 
-        "error": "Usuario no encontrado"
+        "mensaje": "Usuario actualizado 🔄",
+
+        "usuario": {
+            "id": id,
+            "nombre": nuevo_nombre,
+            "edad": nueva_edad
+        }
 
     }
 
@@ -115,20 +152,22 @@ def actualizar_usuario(id: int, nuevo_nombre: str):
 
 def eliminar_usuario(id: int):
 
-    for usuario in usuarios:
+    conexion = obtener_conexion()
 
-        if usuario["id"] == id:
+    cursor = conexion.cursor()
 
-            usuarios.remove(usuario)
+    cursor.execute("""
+    DELETE FROM usuarios
+    WHERE id = ?
+    """, (id,))
 
-            return {
+    conexion.commit()
 
-                "mensaje": "Usuario eliminado ❌"
-
-            }
+    conexion.close()
 
     return {
 
-        "error": "Usuario no encontrado"
+        "mensaje": "Usuario eliminado ❌",
+        "id": id
 
     }

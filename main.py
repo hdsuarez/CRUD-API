@@ -4,7 +4,9 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from models import Usuario
 import sqlite3
+import pandas as pd
 # Crear aplicación
 app = FastAPI()
 
@@ -71,7 +73,19 @@ def obtener_usuarios():
 
     conexion.close()
 
-    return datos
+    usuarios = []
+
+    for fila in datos:
+
+        usuarios.append({
+
+            "id": fila[0],
+            "nombre": fila[1],
+            "edad": fila[2]
+
+        })
+
+    return usuarios
 
 # ===============================
 # CREATE → CREAR USUARIO
@@ -169,5 +183,65 @@ def eliminar_usuario(id: int):
 
         "mensaje": "Usuario eliminado ❌",
         "id": id
+
+    }
+
+#####################################
+# NUEVO ENDPOINT
+#####################################
+
+@app.post("/crear-json")
+
+def crear_usuario_json(usuario: Usuario):
+
+    conexion = obtener_conexion()
+
+    cursor = conexion.cursor()
+
+    cursor.execute("""
+    INSERT INTO usuarios (nombre, edad)
+    VALUES (?, ?)
+    """, (usuario.nombre, usuario.edad))
+
+    conexion.commit()
+
+    nuevo_id = cursor.lastrowid
+
+    conexion.close()
+
+    return {
+
+        "mensaje": "Usuario creado ✅",
+
+        "usuario": {
+
+            "id": nuevo_id,
+            "nombre": usuario.nombre,
+            "edad": usuario.edad
+
+        }
+
+    }
+
+@app.get("/estadisticas")
+def estadisticas():
+
+    conexion = obtener_conexion()
+
+    query = "SELECT nombre, edad FROM usuarios"
+
+    df = pd.read_sql_query(query, conexion)
+
+    conexion.close()
+
+    return {
+
+        "total_usuarios": len(df),
+
+        "edad_promedio": float(df["edad"].mean()),
+
+        "edad_maxima": int(df["edad"].max()),
+
+        "edad_minima": int(df["edad"].min())
 
     }
